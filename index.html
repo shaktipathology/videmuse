@@ -23,6 +23,8 @@
         #spinner-container { position: relative; width: 100%; margin: 20px auto; user-select: none; border-radius: 8px; overflow: hidden; border: 1px solid #e1e1e1; touch-action: pan-y; cursor: grab; }
         #spinner-image-div { width: 100%; aspect-ratio: 3 / 4; background-repeat: no-repeat; background-position: center; background-size: 100%; transition: background-size 0.2s ease-out; }
         #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; font-size: 1.2em; color: #333; z-index: 10; display: none; }
+        #fullscreen-btn { position: absolute; bottom: 10px; right: 10px; width: 32px; height: 32px; background: rgba(0,0,0,0.5); border: none; border-radius: 5px; cursor: pointer; z-index: 5; padding: 6px; }
+        #fullscreen-btn svg { width: 100%; height: 100%; fill: white; }
         #back-button { margin-bottom: 20px; background: #7f8c8d; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; }
         .notes-section { text-align: left; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eeeeee; }
         .notes-section h3 { color: #34495e; }
@@ -52,6 +54,9 @@
         <div id="spinner-container">
             <div id="spinner-image-div" role="img" aria-label="360 specimen view"></div>
             <div id="loading-overlay">Loading...</div>
+            <button id="fullscreen-btn" aria-label="Toggle Fullscreen">
+                <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            </button>
         </div>
         <section class="notes-section">
             <div id="viewer-notes"></div>
@@ -87,6 +92,7 @@
         const spinnerContainer = document.getElementById('spinner-container');
         const searchBar = document.getElementById('search-bar');
         const loadingOverlay = document.getElementById('loading-overlay');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
         
         let allSpecimens = []; 
         let specimensData = {};
@@ -196,7 +202,6 @@
             resetZoomAndPan();
         }
 
-        // IMPROVED PRELOADING to prevent flashing on mobile
         function preloadImages(urls) {
             const preloadContainer = document.getElementById('preload-container');
             preloadContainer.innerHTML = ''; // Clear previous images
@@ -275,10 +280,27 @@
             return Math.sqrt(dx * dx + dy * dy);
         }
 
+        function toggleFullScreen() {
+            const elem = viewerContainer;
+            if (!document.fullscreenElement) {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) { /* Safari */
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) { /* IE11 */
+                    elem.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
         document.getElementById('back-button').addEventListener('click', showList);
         searchBar.addEventListener('keyup', filterSpecimens);
+        fullscreenBtn.addEventListener('click', toggleFullScreen);
         
-        // ADDED: Mouse wheel zoom for desktop
         spinnerContainer.addEventListener('wheel', e => {
             e.preventDefault();
             updateZoom(zoomLevel - e.deltaY * 0.01);
