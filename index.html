@@ -94,7 +94,7 @@
         let currentFrame = 0;
         let isDragging = false;
         let lastX = 0, lastY = 0, panX = 50, panY = 50, zoomLevel = 1;
-        let initialPinchDistance = 0;
+        let initialPinchDistance = 0, initialZoomLevel = 1;
 
         async function loadSpecimenList() {
             try {
@@ -236,11 +236,9 @@
             lastY = clientY;
         }
 
-        function changeZoom(direction) {
-            const zoomStep = 0.2;
-            const newZoom = zoomLevel + direction * zoomStep;
+        function updateZoom(newZoomLevel) {
             const minZoom = 1.0, maxZoom = 4.0;
-            zoomLevel = Math.max(minZoom, Math.min(maxZoom, newZoom));
+            zoomLevel = Math.max(minZoom, Math.min(maxZoom, newZoomLevel));
             spinnerDiv.style.backgroundSize = `${zoomLevel * 100}%`;
             if (zoomLevel <= 1) resetPan();
         }
@@ -283,7 +281,7 @@
         // ADDED: Mouse wheel zoom for desktop
         spinnerContainer.addEventListener('wheel', e => {
             e.preventDefault();
-            changeZoom(e.deltaY > 0 ? -1 : 1);
+            updateZoom(zoomLevel - e.deltaY * 0.01);
         });
         
         spinnerContainer.addEventListener('mousedown', e => onDragStart(e.clientX, e.clientY));
@@ -295,24 +293,25 @@
                 onDragStart(e.touches[0].clientX, e.touches[0].clientY);
             } else if (e.touches.length === 2) {
                 initialPinchDistance = getPinchDistance(e.touches);
+                initialZoomLevel = zoomLevel;
             }
         }, { passive: true });
 
         window.addEventListener('touchend', e => {
             if (e.touches.length < 2) {
                 onDragEnd();
-                initialPinchDistance = 0;
             }
         });
 
         window.addEventListener('touchmove', e => {
             if (e.touches.length === 1) {
                 onDragMove(e.touches[0].clientX, e.touches[0].clientY);
-            } else if (e.touches.length === 2 && initialPinchDistance > 0) {
+            } else if (e.touches.length === 2) {
                 const newPinchDistance = getPinchDistance(e.touches);
-                const pinchRatio = newPinchDistance / initialPinchDistance;
-                const newZoomLevel = zoomLevel * pinchRatio;
-                updateZoom(newZoomLevel);
+                if (initialPinchDistance > 0) {
+                    const pinchRatio = newPinchDistance / initialPinchDistance;
+                    updateZoom(initialZoomLevel * pinchRatio);
+                }
             }
         });
         
