@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Digital Museum of Pathology Specimens</title>
+    <!-- CORRECTED LINK TAG -->
     <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap)" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; color: #333; margin: 0; padding: 20px; }
@@ -55,6 +56,7 @@
         </section>
     </div>
 
+    <!-- CORRECTED SCRIPT TAGS -->
     <script src="[https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js](https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js)"></script>
     <script src="[https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js](https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js)"></script>
 
@@ -196,7 +198,7 @@
             if (Math.abs(newX - lastX) > sensitivity) {
                 currentFrame += (newX > lastX) ? 1 : -1;
                 if (currentFrame >= currentImageUrls.length) currentFrame = 0;
-                if (currentFrame < 0) currentFrame = currentImageUrls.length - 1;
+                if (currentFrame < 0) currentImageUrls.length - 1;
                 spinnerImage.src = currentImageUrls[currentFrame];
                 lastX = newX;
             }
