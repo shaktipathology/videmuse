@@ -20,8 +20,9 @@
         .specimen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
         .specimen-item { padding: 15px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
         .specimen-item:hover { background-color: #ecf0f1; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #spinner-container { width: 100%; margin: 20px auto; user-select: none; border-radius: 8px; overflow: hidden; border: 1px solid #e1e1e1; touch-action: pan-y; cursor: grab; }
+        #spinner-container { position: relative; width: 100%; margin: 20px auto; user-select: none; border-radius: 8px; overflow: hidden; border: 1px solid #e1e1e1; touch-action: pan-y; cursor: grab; }
         #spinner-image-div { width: 100%; aspect-ratio: 3 / 4; background-repeat: no-repeat; background-position: center; background-size: 100%; transition: background-size 0.2s ease-out; }
+        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; font-size: 1.2em; color: #333; z-index: 10; display: none; }
         #back-button { margin-bottom: 20px; background: #7f8c8d; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; }
         .notes-section { text-align: left; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eeeeee; }
         .notes-section h3 { color: #34495e; }
@@ -30,12 +31,11 @@
 </head>
 <body>
 
-    <header class="header">
-        <h1>Digital Museum of Pathology Specimens</h1>
-        <p>An interactive archive for medical education.</p>
-    </header>
-
     <div id="specimen-list-container" class="main-container">
+        <header class="header">
+            <h1>Digital Museum of Pathology Specimens</h1>
+            <p>An interactive archive for medical education.</p>
+        </header>
         <input type="text" id="search-bar" placeholder="Search by title, description, or keyword...">
         <div id="specimen-list">
             <p>Loading specimens...</p>
@@ -49,6 +49,7 @@
         </header>
         <div id="spinner-container">
             <div id="spinner-image-div" role="img" aria-label="360 specimen view"></div>
+            <div id="loading-overlay">Loading...</div>
         </div>
         <section class="notes-section">
             <div id="viewer-notes"></div>
@@ -80,6 +81,7 @@
         const spinnerDiv = document.getElementById('spinner-image-div');
         const spinnerContainer = document.getElementById('spinner-container');
         const searchBar = document.getElementById('search-bar');
+        const loadingOverlay = document.getElementById('loading-overlay');
         
         let allSpecimens = []; 
         let specimensData = {};
@@ -157,7 +159,7 @@
             renderSpecimens(filtered);
         }
 
-        function showViewer(specimenId) {
+        async function showViewer(specimenId) {
             const specimen = specimensData[specimenId];
             if (!specimen) return;
 
@@ -171,13 +173,16 @@
             `;
 
             currentImageUrls = specimen.imageUrls;
-            if (currentImageUrls.length > 0) {
-                spinnerDiv.style.backgroundImage = `url(${currentImageUrls[0]})`;
-                preloadImages(currentImageUrls);
-            }
             
             listContainer.style.display = 'none';
             viewerContainer.style.display = 'block';
+
+            if (currentImageUrls.length > 0) {
+                loadingOverlay.style.display = 'flex';
+                await preloadImages(currentImageUrls); // Wait for images to load
+                loadingOverlay.style.display = 'none';
+                spinnerDiv.style.backgroundImage = `url(${currentImageUrls[0]})`;
+            }
         }
 
         function showList() {
@@ -187,7 +192,15 @@
         }
 
         function preloadImages(urls) {
-            urls.forEach(src => { (new Image()).src = src; });
+            const promises = urls.map(src => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = src;
+                });
+            });
+            return Promise.all(promises);
         }
 
         function updateImage(newX) {
@@ -214,9 +227,11 @@
             lastY = clientY;
         }
 
-        function updateZoom(newZoomLevel) {
+        function changeZoom(direction) {
+            const zoomStep = 0.2;
+            const newZoom = zoomLevel + direction * zoomStep;
             const minZoom = 1.0, maxZoom = 4.0;
-            zoomLevel = Math.max(minZoom, Math.min(maxZoom, newZoomLevel));
+            zoomLevel = Math.max(minZoom, Math.min(maxZoom, newZoom));
             spinnerDiv.style.backgroundSize = `${zoomLevel * 100}%`;
             if (zoomLevel <= 1) resetPan();
         }
@@ -256,6 +271,11 @@
         document.getElementById('back-button').addEventListener('click', showList);
         searchBar.addEventListener('keyup', filterSpecimens);
         
+        spinnerContainer.addEventListener('wheel', e => {
+            e.preventDefault();
+            changeZoom(e.deltaY > 0 ? -1 : 1);
+        });
+        
         spinnerContainer.addEventListener('mousedown', e => onDragStart(e.clientX, e.clientY));
         window.addEventListener('mouseup', onDragEnd);
         window.addEventListener('mousemove', e => onDragMove(e.clientX, e.clientY));
@@ -281,8 +301,8 @@
             } else if (e.touches.length === 2 && initialPinchDistance > 0) {
                 const newPinchDistance = getPinchDistance(e.touches);
                 const pinchRatio = newPinchDistance / initialPinchDistance;
-                updateZoom(zoomLevel * pinchRatio);
-                initialPinchDistance = newPinchDistance; // Update for continuous zoom
+                const newZoomLevel = zoomLevel * pinchRatio;
+                updateZoom(newZoomLevel);
             }
         });
         
