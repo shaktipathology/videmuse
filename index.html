@@ -8,64 +8,129 @@
     <title>Digital Museum of Pathology Specimens</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; color: #333; margin: 0; padding: 10px; box-sizing: border-box; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { font-size: 2em; color: #2c3e50; margin-bottom: 5px; }
-        .header p { font-size: 1.1em; color: #7f8c8d; margin-top: 0; }
-        .main-container { width: 100%; max-width: 900px; margin: 10px auto; background: #fff; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding: 15px; box-sizing: border-box; }
-        #specimen-list-container { text-align: left; }
-        #specimen-viewer-container { display: none; }
-        #search-bar { width: 100%; padding: 12px; font-size: 1em; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
-        .organ-system-category h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px; }
-        .specimen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-        .specimen-item { padding: 15px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        .specimen-item:hover { background-color: #ecf0f1; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #spinner-container { position: relative; width: 100%; margin: 20px auto; user-select: none; border-radius: 8px; overflow: hidden; border: 1px solid #e1e1e1; touch-action: pan-y; cursor: grab; }
-        #spinner-image-div { width: 100%; aspect-ratio: 3 / 4; background-repeat: no-repeat; background-position: center; background-size: 100%; transition: background-size 0.2s ease-out; }
-        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; font-size: 1.2em; color: #333; z-index: 10; display: none; }
-        #fullscreen-btn { position: absolute; bottom: 10px; right: 10px; width: 32px; height: 32px; background: rgba(0,0,0,0.5); border: none; border-radius: 5px; cursor: pointer; z-index: 5; padding: 6px; }
-        #fullscreen-btn svg { width: 100%; height: 100%; fill: white; }
-        #fullscreen-enter-icon { display: block; }
-        #fullscreen-exit-icon { display: none; }
-        #back-button { margin-bottom: 20px; background: #7f8c8d; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; }
-        .notes-section { text-align: left; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eeeeee; }
-        .notes-section h3 { color: #34495e; }
-        .notes-section p, .notes-section ul { font-size: 1em; line-height: 1.6; color: #555; }
+        :root {
+            --bg-color: #f4f7f9;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --header-color: #2c3e50;
+            --subheader-color: #7f8c8d;
+            --border-color: #ddd;
+            --hover-bg-color: #ecf0f1;
+        }
 
-        /* Fit-to-height on landscape screens */
-        @media (orientation: landscape) {
-            #spinner-image-div {
-                height: 60vh; /* Adjust this value as needed */
-                width: auto;
-                aspect-ratio: 3 / 4;
-                margin: auto;
-            }
+        body.dark-theme {
+            --bg-color: #1a1a1a;
+            --card-bg-color: #2c2c2c;
+            --text-color: #f1f1f1;
+            --header-color: #ffffff;
+            --subheader-color: #a0a0a0;
+            --border-color: #444;
+            --hover-bg-color: #3a3a3a;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            margin: 0; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            transition: background-color 0.3s, color 0.3s;
         }
         
-        /* Pseudo-fullscreen mode for iOS */
-        .fullscreen-mode {
-            position: fixed !important;
+        #theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1002;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #theme-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-color);
+        }
+        .sun-icon { display: none; }
+        body.dark-theme .sun-icon { display: block; }
+        body.dark-theme .moon-icon { display: none; }
+
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { font-size: 2em; color: var(--header-color); margin-bottom: 5px; }
+        .header p { font-size: 1.1em; color: var(--subheader-color); margin-top: 0; }
+        .main-container { width: 100%; max-width: 900px; margin: 10px auto; background: var(--card-bg-color); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding: 15px; box-sizing: border-box; }
+        #specimen-list-container { text-align: left; }
+        #specimen-viewer-container { display: none; }
+        #search-bar { width: 100%; padding: 12px; font-size: 1em; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
+        .organ-system-category h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px; }
+        .specimen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .specimen-item { padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .specimen-item:hover { background-color: var(--hover-bg-color); transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #spinner-container { position: relative; width: 100%; margin: 20px auto; user-select: none; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); touch-action: pan-y; cursor: grab; }
+        #spinner-image-div { width: 100%; aspect-ratio: 3 / 4; background-repeat: no-repeat; background-position: center; background-size: 100%; transition: background-size 0.2s ease-out; }
+        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; font-size: 1.2em; color: #333; z-index: 10; display: none; }
+        body.dark-theme #loading-overlay { background: rgba(0, 0, 0, 0.8); color: #f1f1f1; }
+        #back-button { margin-bottom: 20px; background: #7f8c8d; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; }
+        .notes-section { text-align: left; margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+        .notes-section h3 { color: var(--header-color); }
+        .notes-section p, .notes-section ul { font-size: 1em; line-height: 1.6; color: var(--text-color); }
+
+        /* Edge-to-edge viewer styles */
+        body.viewer-active { overflow: hidden; }
+        body.viewer-active #specimen-viewer-container {
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100% !important;
-            height: 100% !important;
-            max-width: 100% !important;
-            z-index: 9999;
-            padding: 0 !important;
-            border-radius: 0 !important;
-        }
-        .fullscreen-mode #spinner-image-div {
+            width: 100vw;
             height: 100vh;
-            width: auto;
-            margin: auto;
+            max-width: none;
+            background: var(--bg-color);
+            z-index: 1000;
+            padding: 0;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        .fullscreen-mode #back-button, .fullscreen-mode header, .fullscreen-mode .notes-section {
+        body.viewer-active #spinner-container {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 0;
+            margin: 0;
+        }
+        body.viewer-active #spinner-image-div {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: unset;
+            background-size: contain; /* Fit to screen */
+        }
+        body.viewer-active #back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+        }
+        body.viewer-active header, body.viewer-active .notes-section {
             display: none;
         }
 
     </style>
 </head>
 <body>
+
+    <button id="theme-toggle" aria-label="Toggle theme">
+        <svg class="sun-icon" viewBox="0 0 24 24"><path d="M12 9c-1.65 0-3 1.35-3 3s1.35 3 3 3 3-1.35 3-3-1.35-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm8-4h-2.07c-.33-1.2-.86-2.32-1.57-3.3l1.45-1.45c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0l-1.45 1.45C14.32 3.86 13.2 3.33 12 3.07V1c0-.55-.45-1-1-1s-1 .45-1 1v2.07c-1.2.33-2.32.86-3.3 1.57l-1.45-1.45c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l1.45 1.45c-.71.98-1.24 2.1-1.57 3.3H1c-.55 0-1 .45-1 1s.45 1 1 1h2.07c.33 1.2.86 2.32 1.57 3.3l-1.45 1.45c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.45-1.45c.98.71 2.1 1.24 3.3 1.57V23c0 .55.45 1 1 1s1-.45 1-1v-2.07c1.2-.33 2.32-.86 3.3-1.57l1.45 1.45c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41l-1.45-1.45c.71-.98 1.24-2.1 1.57-3.3H23c.55 0 1-.45 1-1s-.45-1-1-1zm-8 8c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+        <svg class="moon-icon" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.64-.11 2.41-.31-2.27-1.5-3.82-3.96-3.82-6.81 0-2.64 1.39-4.96 3.48-6.33-.31-.03-.62-.05-.94-.05z"/></svg>
+    </button>
 
     <div id="specimen-list-container">
         <header class="header">
@@ -88,10 +153,6 @@
         <div id="spinner-container">
             <div id="spinner-image-div" role="img" aria-label="360 specimen view"></div>
             <div id="loading-overlay">Loading...</div>
-            <button id="fullscreen-btn" aria-label="Toggle Fullscreen">
-                <svg id="fullscreen-enter-icon" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-                <svg id="fullscreen-exit-icon" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
-            </button>
         </div>
         <section class="notes-section">
             <div id="viewer-notes"></div>
@@ -127,9 +188,7 @@
         const spinnerContainer = document.getElementById('spinner-container');
         const searchBar = document.getElementById('search-bar');
         const loadingOverlay = document.getElementById('loading-overlay');
-        const fullscreenBtn = document.getElementById('fullscreen-btn');
-        const enterIcon = document.getElementById('fullscreen-enter-icon');
-        const exitIcon = document.getElementById('fullscreen-exit-icon');
+        const themeToggle = document.getElementById('theme-toggle');
         
         let allSpecimens = []; 
         let specimensData = {};
@@ -138,6 +197,26 @@
         let isDragging = false;
         let lastX = 0, lastY = 0, panX = 50, panY = 50, zoomLevel = 1;
         let initialPinchDistance = 0, initialZoomLevel = 1;
+
+        // --- Theme Toggler ---
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+            } else {
+                document.body.classList.remove('dark-theme');
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.body.classList.contains('dark-theme') ? 'light' : 'dark';
+            applyTheme(currentTheme);
+            localStorage.setItem('theme', currentTheme);
+        });
+
+        // Apply saved theme on load
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(savedTheme);
+
 
         async function loadSpecimenList() {
             try {
@@ -222,8 +301,8 @@
 
             currentImageUrls = specimen.imageUrls;
             
-            listContainer.style.display = 'none';
-            viewerContainer.style.display = 'block';
+            document.body.classList.add('viewer-active');
+            viewerContainer.style.display = 'flex';
 
             if (currentImageUrls.length > 0) {
                 loadingOverlay.style.display = 'flex';
@@ -234,7 +313,7 @@
         }
 
         function showList() {
-            listContainer.style.display = 'block';
+            document.body.classList.remove('viewer-active');
             viewerContainer.style.display = 'none';
             resetZoomAndPan();
         }
@@ -317,42 +396,8 @@
             return Math.sqrt(dx * dx + dy * dy);
         }
 
-        function toggleFullScreen() {
-            const elem = viewerContainer;
-            const isFullScreen = document.fullscreenElement || document.webkitFullscreenElement || viewerContainer.classList.contains('fullscreen-mode');
-
-            if (!isFullScreen) {
-                if (elem.requestFullscreen) {
-                    elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) { /* Safari */
-                    elem.webkitRequestFullscreen();
-                } else { // Fallback for iOS
-                    viewerContainer.classList.add('fullscreen-mode');
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) { /* Safari */
-                    document.webkitExitFullscreen();
-                } else { // Fallback for iOS
-                    viewerContainer.classList.remove('fullscreen-mode');
-                }
-            }
-        }
-        
-        function updateFullscreenIcon() {
-            const isFullScreen = document.fullscreenElement || document.webkitFullscreenElement || viewerContainer.classList.contains('fullscreen-mode');
-            enterIcon.style.display = isFullScreen ? 'none' : 'block';
-            exitIcon.style.display = isFullScreen ? 'block' : 'none';
-        }
-
-        document.addEventListener('fullscreenchange', updateFullscreenIcon);
-        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
-
-
         document.getElementById('back-button').addEventListener('click', showList);
         searchBar.addEventListener('keyup', filterSpecimens);
-        fullscreenBtn.addEventListener('click', toggleFullScreen);
         
         spinnerContainer.addEventListener('wheel', e => {
             e.preventDefault();
