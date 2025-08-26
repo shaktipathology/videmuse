@@ -1,40 +1,49 @@
+<!-- index.html - Your Public Frontend -->
+<!-- Upload this file to your GitHub repository. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Interactive Specimen Archive</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <title>Digital Museum of Pathology Specimens</title>
+    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap)" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; color: #333; margin: 0; padding: 20px; }
-        .main-container { width: 90%; max-width: 700px; margin: 20px auto; background: #fff; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding: 20px 30px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5em; color: #2c3e50; margin-bottom: 5px; }
+        .header p { font-size: 1.2em; color: #7f8c8d; margin-top: 0; }
+        .main-container { width: 90%; max-width: 900px; margin: 20px auto; background: #fff; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding: 20px 30px; }
         #specimen-list-container { text-align: left; }
-        #specimen-viewer-container { display: none; } /* Initially hidden */
-        #specimen-list h2 { color: #2c3e50; }
-        .specimen-item { padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: background-color 0.2s; }
-        .specimen-item:hover { background-color: #ecf0f1; }
+        #specimen-viewer-container { display: none; }
+        #search-bar { width: 100%; padding: 12px; font-size: 1em; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
+        .organ-system-category h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px; }
+        .specimen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .specimen-item { padding: 15px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .specimen-item:hover { background-color: #ecf0f1; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         #spinner-container { width: 100%; max-width: 400px; margin: 20px auto; cursor: grab; user-select: none; border-radius: 8px; overflow: hidden; border: 1px solid #e1e1e1; }
         #spinner-image { width: 100%; height: auto; display: block; pointer-events: none; }
         #back-button { margin-bottom: 20px; background: #7f8c8d; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; }
         .notes-section { text-align: left; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eeeeee; }
-        .notes-section h2, .notes-section h3 { color: #34495e; }
+        .notes-section h3 { color: #34495e; }
         .notes-section p, .notes-section ul { font-size: 1em; line-height: 1.6; color: #555; }
     </style>
 </head>
 <body>
 
-    <!-- This container shows the list of all specimens -->
+    <header class="header">
+        <h1>Digital Museum of Pathology Specimens</h1>
+        <p>An interactive archive for medical education.</p>
+    </header>
+
     <div id="specimen-list-container" class="main-container">
-        <h2>Specimen Archive</h2>
-        <p>Select a specimen to view the interactive analysis.</p>
+        <input type="text" id="search-bar" placeholder="Search by title, description, or keyword...">
         <div id="specimen-list">
             <p>Loading specimens...</p>
         </div>
     </div>
 
-    <!-- This container shows the selected specimen and the 360 viewer -->
     <div id="specimen-viewer-container" class="main-container">
-        <button id="back-button">&larr; Back to List</button>
+        <button id="back-button">&larr; Back to Archive</button>
         <header>
             <h1 id="viewer-title"></h1>
         </header>
@@ -46,88 +55,128 @@
         </section>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="[https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js](https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js)"></script>
+    <script src="[https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js](https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js)"></script>
 
     <script>
-        // --- Your Firebase Configuration with CORRECTED storageBucket ---
         const firebaseConfig = {
             apiKey: "AIzaSyD3XmS2pl4mBZ8Ov3XjRg7kIi8VtcTwq7E",
             authDomain: "muse-4f192.firebaseapp.com",
             projectId: "muse-4f192",
-            storageBucket: "muse-4f192.firebasestorage.app", // CORRECTED VALUE
+            storageBucket: "muse-4f192.firebasestorage.app",
             messagingSenderId: "587629353476",
             appId: "1:587629353476:web:08063709cc60e92ea57351",
             measurementId: "G-NMDD20TYVB"
         };
-        // ---------------------------------------------------------
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // --- Global variables ---
         const listContainer = document.getElementById('specimen-list-container');
         const viewerContainer = document.getElementById('specimen-viewer-container');
         const specimenListDiv = document.getElementById('specimen-list');
         const spinnerImage = document.getElementById('spinner-image');
         const spinnerContainer = document.getElementById('spinner-container');
+        const searchBar = document.getElementById('search-bar');
         
-        let specimensData = {}; // To store fetched data
+        let allSpecimens = []; // Store all fetched specimens
+        let specimensData = {};
         let currentImageUrls = [];
         let currentFrame = 0;
         let isDragging = false;
         let lastX = 0;
 
-        // --- Fetch and Display List of Specimens ---
         async function loadSpecimenList() {
             try {
                 const snapshot = await db.collection("specimens").orderBy("createdAt", "desc").get();
-                specimenListDiv.innerHTML = ''; // Clear loading message
+                allSpecimens = [];
+                specimensData = {};
                 if (snapshot.empty) {
-                    specimenListDiv.innerHTML = '<p>No specimens found.</p>';
+                    renderSpecimens([]);
                     return;
                 }
                 snapshot.forEach(doc => {
-                    const specimen = doc.data();
-                    specimensData[doc.id] = specimen; // Store data by ID
-                    const item = document.createElement('div');
-                    item.className = 'specimen-item';
-                    item.textContent = specimen.title;
-                    item.onclick = () => showViewer(doc.id);
-                    specimenListDiv.appendChild(item);
+                    const specimen = { id: doc.id, ...doc.data() };
+                    allSpecimens.push(specimen);
+                    specimensData[doc.id] = specimen;
                 });
+                renderSpecimens(allSpecimens);
             } catch (error) {
                 console.error("Error loading specimens:", error);
                 specimenListDiv.innerHTML = '<p>Error loading specimens. Please check your Firestore security rules.</p>';
             }
         }
 
-        // --- Show/Hide Logic ---
+        function renderSpecimens(specimensToRender) {
+            specimenListDiv.innerHTML = '';
+            if (specimensToRender.length === 0) {
+                specimenListDiv.innerHTML = '<p>No matching specimens found.</p>';
+                return;
+            }
+
+            const groupedBySystem = specimensToRender.reduce((acc, specimen) => {
+                const system = specimen.organSystem || 'Other';
+                if (!acc[system]) {
+                    acc[system] = [];
+                }
+                acc[system].push(specimen);
+                return acc;
+            }, {});
+
+            const sortedSystems = Object.keys(groupedBySystem).sort();
+
+            for (const system of sortedSystems) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'organ-system-category';
+                categoryDiv.innerHTML = `<h2>${system}</h2>`;
+                
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'specimen-grid';
+
+                groupedBySystem[system].forEach(specimen => {
+                    const item = document.createElement('div');
+                    item.className = 'specimen-item';
+                    item.textContent = specimen.title;
+                    item.onclick = () => showViewer(specimen.id);
+                    gridDiv.appendChild(item);
+                });
+                
+                categoryDiv.appendChild(gridDiv);
+                specimenListDiv.appendChild(categoryDiv);
+            }
+        }
+        
+        function filterSpecimens() {
+            const query = searchBar.value.toLowerCase();
+            const filtered = allSpecimens.filter(specimen => {
+                return (
+                    specimen.title.toLowerCase().includes(query) ||
+                    specimen.description.toLowerCase().includes(query) ||
+                    specimen.keywords.some(k => k.toLowerCase().includes(query))
+                );
+            });
+            renderSpecimens(filtered);
+        }
+
         function showViewer(specimenId) {
             const specimen = specimensData[specimenId];
             if (!specimen) return;
 
-            // Populate viewer with data
             document.getElementById('viewer-title').textContent = specimen.title;
             const notesDiv = document.getElementById('viewer-notes');
             notesDiv.innerHTML = `
                 <h3>Description</h3>
                 <p>${specimen.description.replace(/\n/g, '<br>')}</p>
-                <h3>Diagnosis</h3>
-                <p>${specimen.diagnosis}</p>
                 <h3>Keywords</h3>
                 <p><em>${specimen.keywords.join(', ')}</em></p>
             `;
 
-            // Setup the 360 viewer
             currentImageUrls = specimen.imageUrls;
             if (currentImageUrls.length > 0) {
                 spinnerImage.src = currentImageUrls[0];
                 preloadImages(currentImageUrls);
             }
             
-            // Switch views
             listContainer.style.display = 'none';
             viewerContainer.style.display = 'block';
         }
@@ -137,7 +186,6 @@
             viewerContainer.style.display = 'none';
         }
 
-        // --- 360 Viewer Logic ---
         function preloadImages(urls) {
             urls.forEach(src => { (new Image()).src = src; });
         }
@@ -158,8 +206,8 @@
         const onDragMove = (clientX) => { if (isDragging) updateImage(clientX); };
         const onDragEnd = () => { isDragging = false; spinnerContainer.style.cursor = 'grab'; };
 
-        // --- Event Listeners ---
         document.getElementById('back-button').addEventListener('click', showList);
+        searchBar.addEventListener('keyup', filterSpecimens);
         spinnerContainer.addEventListener('mousedown', (e) => onDragStart(e.clientX));
         window.addEventListener('mousemove', (e) => onDragMove(e.clientX));
         window.addEventListener('mouseup', onDragEnd);
@@ -167,7 +215,6 @@
         window.addEventListener('touchmove', (e) => onDragMove(e.touches[0].clientX));
         window.addEventListener('touchend', onDragEnd);
 
-        // --- Initial Load ---
         loadSpecimenList();
     </script>
 </body>
