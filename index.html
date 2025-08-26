@@ -31,14 +31,16 @@
 </head>
 <body>
 
-    <div id="specimen-list-container" class="main-container">
+    <div id="specimen-list-container">
         <header class="header">
             <h1>Digital Museum of Pathology Specimens</h1>
             <p>An interactive archive for medical education.</p>
         </header>
-        <input type="text" id="search-bar" placeholder="Search by title, description, or keyword...">
-        <div id="specimen-list">
-            <p>Loading specimens...</p>
+        <div class="main-container">
+            <input type="text" id="search-bar" placeholder="Search by title, description, or keyword...">
+            <div id="specimen-list">
+                <p>Loading specimens...</p>
+            </div>
         </div>
     </div>
 
@@ -55,6 +57,9 @@
             <div id="viewer-notes"></div>
         </section>
     </div>
+
+    <!-- Hidden container for preloading images into the DOM -->
+    <div id="preload-container" style="display: none;"></div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -191,13 +196,17 @@
             resetZoomAndPan();
         }
 
+        // IMPROVED PRELOADING to prevent flashing on mobile
         function preloadImages(urls) {
+            const preloadContainer = document.getElementById('preload-container');
+            preloadContainer.innerHTML = ''; // Clear previous images
             const promises = urls.map(src => {
                 return new Promise((resolve, reject) => {
-                    const img = new Image();
+                    const img = document.createElement('img');
                     img.onload = resolve;
                     img.onerror = reject;
                     img.src = src;
+                    preloadContainer.appendChild(img);
                 });
             });
             return Promise.all(promises);
@@ -271,6 +280,7 @@
         document.getElementById('back-button').addEventListener('click', showList);
         searchBar.addEventListener('keyup', filterSpecimens);
         
+        // ADDED: Mouse wheel zoom for desktop
         spinnerContainer.addEventListener('wheel', e => {
             e.preventDefault();
             changeZoom(e.deltaY > 0 ? -1 : 1);
