@@ -200,7 +200,8 @@
             if (Math.abs(newX - lastX) > sensitivity) {
                 currentFrame += (newX > lastX) ? 1 : -1;
                 if (currentFrame >= currentImageUrls.length) currentFrame = 0;
-                if (currentFrame < 0) currentImageUrls.length - 1;
+                // CORRECTED LINE
+                if (currentFrame < 0) currentFrame = currentImageUrls.length - 1;
                 spinnerImage.src = currentImageUrls[currentFrame];
                 lastX = newX;
             }
