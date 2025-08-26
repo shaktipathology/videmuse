@@ -6,8 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Digital Museum of Pathology Specimens</title>
-    <!-- CORRECTED LINK TAG -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap)" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; color: #333; margin: 0; padding: 20px; }
         .header { text-align: center; margin-bottom: 30px; }
@@ -56,23 +55,26 @@
         </section>
     </div>
 
-    <!-- CORRECTED SCRIPT TAGS -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="[https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js](https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js)"></script>
+    <script src="[https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js](https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js)"></script>
+    <script src="[https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js](https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js)"></script>
 
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyD3XmS2pl4mBZ8Ov3XjRg7kIi8VtcTwq7E",
             authDomain: "muse-4f192.firebaseapp.com",
             projectId: "muse-4f192",
-            storageBucket: "muse-4f192.firebasestorage.app",
+            storageBucket: "muse-4f192.firebasestorage.app", // The DEFAULT bucket
             messagingSenderId: "587629353476",
             appId: "1:587629353476:web:08063709cc60e92ea57351",
             measurementId: "G-NMDD20TYVB"
         };
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // CORRECTED INITIALIZATION
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = app.firestore();
+        // Explicitly get a reference to your new bucket in India
+        const storage = firebase.storage(app, "gs://muse-4f192-asia");
 
         const listContainer = document.getElementById('specimen-list-container');
         const viewerContainer = document.getElementById('specimen-viewer-container');
@@ -81,7 +83,7 @@
         const spinnerContainer = document.getElementById('spinner-container');
         const searchBar = document.getElementById('search-bar');
         
-        let allSpecimens = []; // Store all fetched specimens
+        let allSpecimens = []; 
         let specimensData = {};
         let currentImageUrls = [];
         let currentFrame = 0;
