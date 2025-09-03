@@ -186,6 +186,11 @@
             padding: 50px 20px 20px 20px; text-align: left; z-index: 1001;
         }
 
+        /* Hides the main list content when the viewer is open */
+        body.viewer-active #specimen-list-container {
+            display: none;
+        }
+
         /* Widescreen layout adjustments */
         @media (min-width: 1024px) and (orientation: landscape) {
             body.viewer-active #specimen-viewer-container {
@@ -396,6 +401,8 @@
 
         function showList() {
             document.body.classList.remove('viewer-active');
+            viewerContainer.style.display = 'none';
+            resetZoomAndPan();
         }
 
         function preloadImages(urls) {
@@ -440,11 +447,13 @@
         function updateZoom(newZoomLevel) {
             const minZoom = 1.0, maxZoom = 5.0;
             zoomLevel = Math.max(minZoom, Math.min(maxZoom, newZoomLevel));
-            spinnerDiv.style.backgroundSize = `${zoomLevel * 100}%`;
 
+            // If zoom is at minimum, reset to 'contain' to ensure it fits perfectly
             if (zoomLevel <= 1.01) {
+                spinnerDiv.style.backgroundSize = 'contain';
                 resetPan();
             } else {
+                spinnerDiv.style.backgroundSize = `${zoomLevel * 100}%`;
                 // Re-clamp pan values after zoom to prevent getting stuck at an edge
                 const minPan = 50 / zoomLevel;
                 const maxPan = 100 - minPan;
@@ -515,8 +524,8 @@
             if (e.touches.length < 2) onDragEnd();
         });
 
-        window.addEventListener('touchmove', e => {
-            // Prevent browser default actions like scrolling or zooming the whole page
+        spinnerContainer.addEventListener('touchmove', e => {
+            // Prevent browser default actions like scrolling ONLY on the viewer
             e.preventDefault(); 
             
             if (e.touches.length === 1 && isDragging) {
@@ -534,4 +543,5 @@
     </script>
 </body>
 </html>
+
 
