@@ -139,7 +139,7 @@
             background-repeat: no-repeat;
             background-position: center;
             background-size: 100%;
-            transition: background-size 0.1s ease-out;
+            transition: background-size 0.25s ease-out; /* Smoother transition */
         }
         #loading-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -289,6 +289,9 @@
         let lastX = 0, lastY = 0;
         let panX = 50, panY = 50, zoomLevel = 1;
         let initialPinchDistance = 0, initialZoomLevel = 1;
+        // Add new state variables to manage aspect ratios for smooth zoom
+        let imageAspectRatio = 1;
+        let containerAspectRatio = 1;
 
         // --- Theme Toggler ---
         function applyTheme(theme) {
@@ -376,7 +379,7 @@
         }
 
         // --- Viewer Logic ---
-        async function showViewer(specimenId) {
+        function showViewer(specimenId) {
             const specimen = specimensData[specimenId];
             if (!specimen) return;
 
@@ -387,16 +390,36 @@
             
             document.body.classList.add('viewer-active');
             viewerContainer.style.display = 'flex';
-            resetZoomAndPan(); // Reset state for the new specimen
 
-            if (currentImageUrls.length > 0) {
-                loadingOverlay.style.display = 'flex';
-                await preloadImages(currentImageUrls);
-                loadingOverlay.style.display = 'none';
-                spinnerDiv.style.backgroundImage = `url(${currentImageUrls[0]})`;
-            } else {
-                 spinnerDiv.style.backgroundImage = 'none';
-            }
+            // Use requestAnimationFrame to ensure container dimensions are available
+            requestAnimationFrame(async () => {
+                if (currentImageUrls.length > 0) {
+                    loadingOverlay.style.display = 'flex';
+                    
+                    // Asynchronously preload all images for the spinner
+                    preloadImages(currentImageUrls);
+
+                    // But only wait for the first image's dimensions to show the viewer
+                    const firstImage = await getFirstImageDimensions(currentImageUrls[0]);
+                    
+                    loadingOverlay.style.display = 'none';
+
+                    if (firstImage) {
+                        const container = spinnerDiv;
+                        imageAspectRatio = firstImage.width / firstImage.height;
+                        containerAspectRatio = container.clientWidth / container.clientHeight; 
+                    } else {
+                        imageAspectRatio = 1; // Default if image fails
+                        containerAspectRatio = 1;
+                    }
+
+                    resetZoomAndPan(); // Now reset, which sets the initial backgroundSize correctly
+                    spinnerDiv.style.backgroundImage = `url(${currentImageUrls[0]})`;
+                } else {
+                     spinnerDiv.style.backgroundImage = 'none';
+                     resetZoomAndPan(); // Also reset if there are no images
+                }
+            });
         }
 
         function showList() {
@@ -414,6 +437,16 @@
                 img.src = src;
                 preloadContainer.appendChild(img);
             })));
+        }
+
+        // New helper function to get image dimensions
+        function getFirstImageDimensions(src) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                img.onerror = () => resolve(null);
+                img.src = src;
+            });
         }
 
         // --- IMPROVED Zoom, Pan, and Rotate Logic ---
@@ -448,18 +481,27 @@
             const minZoom = 1.0, maxZoom = 5.0;
             zoomLevel = Math.max(minZoom, Math.min(maxZoom, newZoomLevel));
 
-            // If zoom is at minimum, reset to 'contain' to ensure it fits perfectly
-            if (zoomLevel <= 1.01) {
-                spinnerDiv.style.backgroundSize = 'contain';
-                resetPan();
+            const scaledZoom = zoomLevel * 100;
+
+            // Always use percentage-based sizes for smooth transitions
+            if (imageAspectRatio > containerAspectRatio) {
+                // Image is wider than container, scale by width
+                spinnerDiv.style.backgroundSize = `${scaledZoom}% auto`;
             } else {
-                spinnerDiv.style.backgroundSize = `${zoomLevel * 100}%`;
+                // Image is taller than container, scale by height
+                spinnerDiv.style.backgroundSize = `auto ${scaledZoom}%`;
+            }
+
+            if (zoomLevel > 1.0) {
                 // Re-clamp pan values after zoom to prevent getting stuck at an edge
                 const minPan = 50 / zoomLevel;
                 const maxPan = 100 - minPan;
                 panX = Math.max(minPan, Math.min(maxPan, panX));
                 panY = Math.max(minPan, Math.min(maxPan, panY));
                 spinnerDiv.style.backgroundPosition = `${panX}% ${panY}%`;
+            } else {
+                // If zoom is back at minimum, reset pan
+                resetPan();
             }
         }
 
@@ -470,7 +512,12 @@
         
         function resetZoomAndPan() {
             zoomLevel = 1.0;
-            spinnerDiv.style.backgroundSize = 'contain';
+            // Set initial size based on aspect ratio instead of using 'contain'
+            if (imageAspectRatio > containerAspectRatio) {
+                spinnerDiv.style.backgroundSize = '100% auto';
+            } else {
+                spinnerDiv.style.backgroundSize = 'auto 100%';
+            }
             resetPan();
         }
 
@@ -482,7 +529,7 @@
 
         function onDragMove(clientX, clientY) {
             if (!isDragging) return;
-            if (zoomLevel > 1.01) { panImage(clientX, clientY); } 
+            if (zoomLevel > 1.0) { panImage(clientX, clientY); } 
             else { updateImage(clientX); }
         }
 
@@ -503,7 +550,7 @@
         
         spinnerContainer.addEventListener('wheel', e => {
             e.preventDefault();
-            updateZoom(zoomLevel - e.deltaY * 0.01);
+            updateZoom(zoomLevel - e.deltaY * 0.005); // Reduced sensitivity for smoother zoom
         }, { passive: false });
         
         spinnerContainer.addEventListener('mousedown', e => onDragStart(e.clientX, e.clientY));
@@ -543,5 +590,7 @@
     </script>
 </body>
 </html>
+
+
 
 
