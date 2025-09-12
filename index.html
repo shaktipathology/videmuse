@@ -80,7 +80,7 @@
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 10px;
             margin-top: 30px;
-            font-size: 1.4em; /* Made smaller as requested */
+            font-size: 1.4em;
         }
         .specimen-grid {
             display: grid;
@@ -109,17 +109,10 @@
         }
         .specimen-info { z-index: 2; }
         .specimen-title {
-            font-size: 1.15em; /* Larger title for specimen */
+            font-size: 1.15em;
             font-weight: 700;
             margin: 4px 0 0 0;
             line-height: 1.3;
-        }
-        .specimen-organ-tag {
-            font-size: 0.75em; /* Smaller tag for organ system */
-            background-color: rgba(255, 255, 255, 0.2);
-            padding: 3px 8px;
-            border-radius: 12px;
-            display: inline-block;
         }
         
         #spinner-container {
@@ -143,20 +136,16 @@
         }
         #loading-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(var(--bg-color-rgb, 244, 247, 249), 0.8);
             display: flex; justify-content: center; align-items: center;
-            font-size: 1.2em; color: #333; z-index: 10; display: none;
+            font-size: 1.2em; color: var(--text-color); z-index: 10; display: none;
         }
-        body.dark-theme #loading-overlay { background: rgba(0, 0, 0, 0.8); color: #f1f1f1; }
+        body.dark-theme #loading-overlay { background: rgba(var(--bg-color-rgb, 18, 18, 18), 0.8); }
         
         #back-button {
             margin-bottom: 20px; background: var(--button-bg-color);
             border: 1px solid var(--button-border-color); color: white;
             padding: 10px 15px; border-radius: 4px; cursor: pointer;
-        }
-        .notes-section {
-            text-align: left; margin-top: 25px; padding-top: 20px;
-            border-top: 1px solid var(--border-color);
         }
         
         /* --- Edge-to-edge viewer styles --- */
@@ -176,7 +165,7 @@
             background-size: contain;
         }
         body.viewer-active #back-button {
-            position: absolute; top: 20px; left: 20px; z-index: 1002; /* Ensure it's on top */
+            position: absolute; top: 20px; left: 20px; z-index: 1002;
         }
         body.viewer-active #viewer-info-panel {
             display: block;
@@ -186,28 +175,24 @@
             padding: 50px 20px 20px 20px; text-align: left; z-index: 1001;
         }
 
-        /* Hides the main list content when the viewer is open */
-        body.viewer-active #specimen-list-container {
-            display: none;
-        }
+        body.viewer-active #specimen-list-container { display: none; }
 
-        /* Widescreen layout adjustments */
         @media (min-width: 1024px) and (orientation: landscape) {
             body.viewer-active #specimen-viewer-container {
                 flex-direction: row;
             }
             body.viewer-active #spinner-container {
-                width: auto; /* Let flexbox decide width */
+                width: auto;
                 height: 100vh;
             }
             body.viewer-active #viewer-info-panel {
                 position: relative;
                 flex-shrink: 0;
-                width: 380px; /* Wider panel for more text */
+                width: 380px;
                 height: 100vh;
                 max-height: 100vh;
                 background: var(--card-bg-color);
-                padding: 70px 30px 30px 30px; /* More padding */
+                padding: 70px 30px 30px 30px;
                 box-shadow: -4px 0 20px rgba(0,0,0,0.1);
                 z-index: 1001;
             }
@@ -218,8 +203,19 @@
 
         #viewer-info-title { font-size: 1.5em; color: var(--header-color); }
         #viewer-info-description { line-height: 1.6; color: var(--text-color); }
-        .notes-section { display: none; } /* Hide the old notes section */
 
+        /* Style for the new progress bar */
+        #loading-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            width: 0%;
+            background-color: var(--accent-color);
+            z-index: 11;
+            transition: width 0.2s ease-out, opacity 0.5s ease 0.5s;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -247,6 +243,7 @@
         <div id="spinner-container">
             <div id="spinner-image-div" role="img" aria-label="360 specimen view"></div>
             <div id="loading-overlay">Loading...</div>
+            <div id="loading-progress-bar"></div>
         </div>
         <div id="viewer-info-panel">
             <h2 id="viewer-info-title"></h2>
@@ -289,11 +286,10 @@
         let lastX = 0, lastY = 0;
         let panX = 50, panY = 50, zoomLevel = 1;
         let initialPinchDistance = 0, initialZoomLevel = 1;
-        // Add new state variables to manage aspect ratios for smooth zoom
         let imageAspectRatio = 1;
         let containerAspectRatio = 1;
+        let isRotationReady = false;
 
-        // --- Theme Toggler ---
         function applyTheme(theme) {
             document.body.classList.toggle('dark-theme', theme === 'dark');
         }
@@ -304,7 +300,6 @@
         });
         applyTheme(localStorage.getItem('theme') || 'light');
 
-        // --- Data Loading and Rendering ---
         async function loadSpecimenList() {
             try {
                 const snapshot = await db.collection("specimens").orderBy("createdAt", "desc").get();
@@ -378,7 +373,6 @@
             renderSpecimens(filtered);
         }
 
-        // --- Viewer Logic ---
         function showViewer(specimenId) {
             const specimen = specimensData[specimenId];
             if (!specimen) return;
@@ -386,22 +380,21 @@
             document.getElementById('viewer-info-title').textContent = specimen.title;
             document.getElementById('viewer-info-description').innerHTML = specimen.description.replace(/\n/g, '<br>');
 
+            isRotationReady = false;
             currentImageUrls = specimen.imageUrls || [];
             
             document.body.classList.add('viewer-active');
             viewerContainer.style.display = 'flex';
 
-            // Use requestAnimationFrame to ensure container dimensions are available
             requestAnimationFrame(async () => {
+                const progressBar = document.getElementById('loading-progress-bar');
+                progressBar.style.opacity = '1';
+                progressBar.style.width = '0%';
+                
                 if (currentImageUrls.length > 0) {
                     loadingOverlay.style.display = 'flex';
-                    
-                    // Asynchronously preload all images for the spinner
-                    preloadImages(currentImageUrls);
 
-                    // But only wait for the first image's dimensions to show the viewer
                     const firstImage = await getFirstImageDimensions(currentImageUrls[0]);
-                    
                     loadingOverlay.style.display = 'none';
 
                     if (firstImage) {
@@ -409,15 +402,27 @@
                         imageAspectRatio = firstImage.width / firstImage.height;
                         containerAspectRatio = container.clientWidth / container.clientHeight; 
                     } else {
-                        imageAspectRatio = 1; // Default if image fails
+                        imageAspectRatio = 1;
                         containerAspectRatio = 1;
                     }
-
-                    resetZoomAndPan(); // Now reset, which sets the initial backgroundSize correctly
+                    
+                    resetZoomAndPan();
                     spinnerDiv.style.backgroundImage = `url(${currentImageUrls[0]})`;
+
+                    if (currentImageUrls.length > 1) {
+                        const onProgress = (loaded, total) => {
+                            progressBar.style.width = `${(loaded / total) * 100}%`;
+                        };
+                        await preloadImages(currentImageUrls, onProgress);
+                        isRotationReady = true;
+                        progressBar.style.opacity = '0';
+                    } else {
+                        isRotationReady = true;
+                        progressBar.style.width = '0%';
+                    }
                 } else {
                      spinnerDiv.style.backgroundImage = 'none';
-                     resetZoomAndPan(); // Also reset if there are no images
+                     resetZoomAndPan();
                 }
             });
         }
@@ -428,18 +433,27 @@
             resetZoomAndPan();
         }
 
-        function preloadImages(urls) {
+        function preloadImages(urls, onProgress) {
             const preloadContainer = document.getElementById('preload-container');
             preloadContainer.innerHTML = '';
+            let loadedCount = 0;
+            const totalImages = urls.length;
+            onProgress(0, totalImages);
+
             return Promise.all(urls.map(src => new Promise((resolve) => {
                 const img = document.createElement('img');
-                img.onload = img.onerror = resolve; // Resolve even on error to not block UI
+                const onFinish = () => {
+                    loadedCount++;
+                    onProgress(loadedCount, totalImages);
+                    resolve();
+                };
+                img.onload = onFinish;
+                img.onerror = onFinish; 
                 img.src = src;
                 preloadContainer.appendChild(img);
             })));
         }
 
-        // New helper function to get image dimensions
         function getFirstImageDimensions(src) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -449,9 +463,10 @@
             });
         }
 
-        // --- IMPROVED Zoom, Pan, and Rotate Logic ---
         function updateImage(newX) {
-            const sensitivity = 8; // Lower is more sensitive
+            if (!isRotationReady || currentImageUrls.length <= 1) return;
+
+            const sensitivity = 8;
             if (Math.abs(newX - lastX) > sensitivity) {
                 currentFrame += (newX > lastX) ? -1 : 1;
                 if (currentFrame >= currentImageUrls.length) currentFrame = 0;
@@ -483,24 +498,19 @@
 
             const scaledZoom = zoomLevel * 100;
 
-            // Always use percentage-based sizes for smooth transitions
             if (imageAspectRatio > containerAspectRatio) {
-                // Image is wider than container, scale by width
                 spinnerDiv.style.backgroundSize = `${scaledZoom}% auto`;
             } else {
-                // Image is taller than container, scale by height
                 spinnerDiv.style.backgroundSize = `auto ${scaledZoom}%`;
             }
 
             if (zoomLevel > 1.0) {
-                // Re-clamp pan values after zoom to prevent getting stuck at an edge
                 const minPan = 50 / zoomLevel;
                 const maxPan = 100 - minPan;
                 panX = Math.max(minPan, Math.min(maxPan, panX));
                 panY = Math.max(minPan, Math.min(maxPan, panY));
                 spinnerDiv.style.backgroundPosition = `${panX}% ${panY}%`;
             } else {
-                // If zoom is back at minimum, reset pan
                 resetPan();
             }
         }
@@ -512,7 +522,6 @@
         
         function resetZoomAndPan() {
             zoomLevel = 1.0;
-            // Set initial size based on aspect ratio instead of using 'contain'
             if (imageAspectRatio > containerAspectRatio) {
                 spinnerDiv.style.backgroundSize = '100% auto';
             } else {
@@ -529,8 +538,11 @@
 
         function onDragMove(clientX, clientY) {
             if (!isDragging) return;
-            if (zoomLevel > 1.0) { panImage(clientX, clientY); } 
-            else { updateImage(clientX); }
+            if (zoomLevel > 1.0) { 
+                panImage(clientX, clientY); 
+            } else if (isRotationReady) {
+                updateImage(clientX); 
+            }
         }
 
         function onDragEnd() {
@@ -544,13 +556,12 @@
             return Math.sqrt(dx * dx + dy * dy);
         }
 
-        // --- Event Listeners ---
         document.getElementById('back-button').addEventListener('click', showList);
         searchBar.addEventListener('keyup', filterSpecimens);
         
         spinnerContainer.addEventListener('wheel', e => {
             e.preventDefault();
-            updateZoom(zoomLevel - e.deltaY * 0.005); // Reduced sensitivity for smoother zoom
+            updateZoom(zoomLevel - e.deltaY * 0.005);
         }, { passive: false });
         
         spinnerContainer.addEventListener('mousedown', e => onDragStart(e.clientX, e.clientY));
@@ -561,21 +572,25 @@
             if (e.touches.length === 1) {
                 onDragStart(e.touches[0].clientX, e.touches[0].clientY);
             } else if (e.touches.length === 2) {
-                isDragging = false; // Stop single-touch drag when pinch starts
+                isDragging = false;
                 initialPinchDistance = getPinchDistance(e.touches);
                 initialZoomLevel = zoomLevel;
             }
-        }, { passive: false }); // `passive: false` is crucial to allow preventDefault
+        }, { passive: false });
 
         window.addEventListener('touchend', e => {
-            if (e.touches.length < 2) onDragEnd();
+            if (e.touches.length === 0) {
+                onDragEnd();
+            } else if (e.touches.length === 1) {
+                onDragStart(e.touches[0].clientX, e.touches[0].clientY);
+            }
         });
 
         spinnerContainer.addEventListener('touchmove', e => {
-            // Prevent browser default actions like scrolling ONLY on the viewer
             e.preventDefault(); 
+            if (!isDragging) return;
             
-            if (e.touches.length === 1 && isDragging) {
+            if (e.touches.length === 1) {
                 onDragMove(e.touches[0].clientX, e.touches[0].clientY);
             } else if (e.touches.length === 2) {
                 const newPinchDistance = getPinchDistance(e.touches);
@@ -590,7 +605,4 @@
     </script>
 </body>
 </html>
-
-
-
 
