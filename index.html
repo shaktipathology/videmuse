@@ -74,7 +74,6 @@
         #specimen-viewer-container { display: none; }
         #search-bar { width: 100%; padding: 12px; font-size: 1em; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
         
-        /* --- Styles for the redesigned specimen list --- */
         .organ-system-category h2 {
             color: var(--header-color);
             border-bottom: 1px solid var(--border-color);
@@ -118,21 +117,16 @@
         #spinner-container {
             position: relative;
             width: 100%;
-            margin: 20px auto;
             user-select: none;
-            border-radius: 8px;
             overflow: hidden;
-            border: 1px solid var(--border-color);
-            touch-action: none; /* Disables browser default touch actions like scroll */
+            touch-action: none; 
             cursor: grab;
         }
         #spinner-image-div {
             width: 100%;
-            aspect-ratio: 4 / 3;
             background-repeat: no-repeat;
             background-position: center;
-            background-size: 100%;
-            transition: background-size 0.25s ease-out; /* Smoother transition */
+            transition: background-size 0.25s ease-out;
         }
         #loading-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -142,69 +136,80 @@
         }
         body.dark-theme #loading-overlay { background: rgba(var(--bg-color-rgb, 18, 18, 18), 0.8); }
         
-        #back-button {
-            margin-bottom: 20px; background: var(--button-bg-color);
-            border: 1px solid var(--button-border-color); color: white;
-            padding: 10px 15px; border-radius: 4px; cursor: pointer;
-        }
-        
-        /* --- Edge-to-edge viewer styles --- */
-        body.viewer-active { overflow: hidden; }
+        /* --- Styles for the new "scrollable page" viewer on MOBILE --- */
+        body.viewer-active #specimen-list-container { display: none; }
         body.viewer-active #specimen-viewer-container {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            max-width: none; background: var(--bg-color); z-index: 1000;
-            padding: 0; border-radius: 0; display: flex;
-            flex-direction: column; /* Mobile-first default */
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+            box-shadow: none;
+            border-radius: 0;
+            background-color: transparent;
         }
         body.viewer-active #spinner-container {
-             flex-grow: 1; width: 100%; height: auto;
-             border: none; border-radius: 0; margin: 0;
+            height: 65vh; /* Give the image a large, fixed portion of the screen */
+            margin: 0;
+            border-radius: 0;
         }
         body.viewer-active #spinner-image-div {
-            width: 100%; height: 100%; aspect-ratio: unset;
+            width: 100%;
+            height: 100%;
             background-size: contain;
         }
         body.viewer-active #back-button {
-            position: absolute; top: 20px; left: 20px; z-index: 1002;
+            position: fixed; /* Keep back button accessible while scrolling */
+            top: 20px;
+            left: 20px;
+            z-index: 1002;
         }
         body.viewer-active #viewer-info-panel {
             display: block;
-            position: absolute; bottom: 0; left: 0; right: 0;
-            max-height: 35vh; overflow-y: auto;
-            background: linear-gradient(to top, var(--card-bg-color) 80%, transparent);
-            padding: 50px 20px 20px 20px; text-align: left; z-index: 1001;
+            background: var(--card-bg-color);
+            padding: 25px;
+            min-height: 35vh; /* Ensure there's content area below the image */
         }
 
-        body.viewer-active #specimen-list-container { display: none; }
-
+        /* --- Styles for DESKTOP side-by-side viewer --- */
         @media (min-width: 1024px) and (orientation: landscape) {
+            body.viewer-active { overflow: hidden; } /* Lock page scroll on desktop */
             body.viewer-active #specimen-viewer-container {
+                display: flex; /* Revert to flexbox for side-by-side layout */
                 flex-direction: row;
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: var(--bg-color);
             }
             body.viewer-active #spinner-container {
+                flex-grow: 1;
                 width: auto;
                 height: 100vh;
+                border: none;
             }
             body.viewer-active #viewer-info-panel {
                 position: relative;
                 flex-shrink: 0;
                 width: 380px;
                 height: 100vh;
+                min-height: unset;
                 max-height: 100vh;
                 background: var(--card-bg-color);
                 padding: 70px 30px 30px 30px;
                 box-shadow: -4px 0 20px rgba(0,0,0,0.1);
                 z-index: 1001;
+                overflow-y: auto; /* Allow info panel to scroll independently */
             }
             body.dark-theme body.viewer-active #viewer-info-panel {
                 box-shadow: -4px 0 20px rgba(0,0,0,0.4);
+            }
+            body.viewer-active #back-button {
+                position: absolute; /* Position relative to info panel */
             }
         }
 
         #viewer-info-title { font-size: 1.5em; color: var(--header-color); }
         #viewer-info-description { line-height: 1.6; color: var(--text-color); }
 
-        /* Style for the new progress bar */
         #loading-progress-bar {
             position: absolute;
             bottom: 0;
@@ -270,6 +275,7 @@
         const app = firebase.initializeApp(firebaseConfig);
         const db = app.firestore();
 
+        const listContainer = document.getElementById('specimen-list-container');
         const viewerContainer = document.getElementById('specimen-viewer-container');
         const specimenListDiv = document.getElementById('specimen-list');
         const spinnerDiv = document.getElementById('spinner-image-div');
@@ -289,6 +295,7 @@
         let imageAspectRatio = 1;
         let containerAspectRatio = 1;
         let isRotationReady = false;
+        let lastScrollPosition = 0; // Variable to store scroll position
 
         function applyTheme(theme) {
             document.body.classList.toggle('dark-theme', theme === 'dark');
@@ -377,6 +384,8 @@
             const specimen = specimensData[specimenId];
             if (!specimen) return;
 
+            lastScrollPosition = window.scrollY; // Save scroll position
+
             document.getElementById('viewer-info-title').textContent = specimen.title;
             document.getElementById('viewer-info-description').innerHTML = specimen.description.replace(/\n/g, '<br>');
 
@@ -384,7 +393,9 @@
             currentImageUrls = specimen.imageUrls || [];
             
             document.body.classList.add('viewer-active');
-            viewerContainer.style.display = 'flex';
+            viewerContainer.style.display = 'block';
+            listContainer.style.display = 'none';
+            window.scrollTo(0, 0); // Scroll to top of the new page
 
             requestAnimationFrame(async () => {
                 const progressBar = document.getElementById('loading-progress-bar');
@@ -430,7 +441,11 @@
         function showList() {
             document.body.classList.remove('viewer-active');
             viewerContainer.style.display = 'none';
+            listContainer.style.display = 'block';
             resetZoomAndPan();
+            
+            // Restore scroll position
+            window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
         }
 
         function preloadImages(urls, onProgress) {
@@ -588,9 +603,10 @@
 
         spinnerContainer.addEventListener('touchmove', e => {
             e.preventDefault(); 
-            if (!isDragging) return;
+            if (e.touches.length === 1 && !isDragging) return; // Prevent scroll when not dragging
+            if (e.touches.length === 2) isDragging = false; // Stop drag if pinching
             
-            if (e.touches.length === 1) {
+            if (e.touches.length === 1 && isDragging) {
                 onDragMove(e.touches[0].clientX, e.touches[0].clientY);
             } else if (e.touches.length === 2) {
                 const newPinchDistance = getPinchDistance(e.touches);
